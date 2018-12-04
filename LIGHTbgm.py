@@ -6,7 +6,7 @@ from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import train_test_split
 
 print('Loading data...')
-train_data = pd.read_csv('train_all.csv')   # 读取数据
+train_data = pd.read_csv('train_org.csv')   # 读取数据
 train_data['service_type']=train_data['service_type'].astype(int)
 train_data['is_mix_service']=train_data['is_mix_service'].astype(int)
 train_data['online_time']=train_data['online_time'].astype(int)
@@ -24,7 +24,7 @@ train_data['current_service']=train_data['current_service'].astype(int)
 
 dit = {89950166:0, 89950167:1, 89950168:2, 90063345:3, 90109916:4, 90155946:5, 99999825:6, 99999826:7, 99999827:8, 99999828:9, 99999830:10}
 antidit = {0: 89950166, 1: 89950167, 2: 89950168, 3: 90063345, 4: 90109916, 5: 90155946, 6: 99999825, 7: 99999826, 8: 99999827, 9: 99999828, 10: 99999830}
-train_data.pop('user_id')
+#train_data.pop('user_id')
 ty = train_data.pop('current_service')
 ty = ty.astype(int)
 y = [dit[x] for x in ty]
@@ -46,8 +46,8 @@ params = {
     'boosting_type': 'gbdt',
     'objective': 'multiclass',
     'metric': 'multi_logloss',
-    'num_class': 12,
-    'num_leaves': 31,
+    'num_class': 11,
+    'num_leaves': 1000,
     'learning_rate': 0.05,
     'feature_fraction': 0.9,
     'bagging_fraction': 0.8,
@@ -59,7 +59,7 @@ print('Starting training...')
 # train
 gbm = lgb.train(params,
                 train,
-                num_boost_round=20,
+                num_boost_round=2000,
                 valid_sets=valid,
                 early_stopping_rounds=5)
 
