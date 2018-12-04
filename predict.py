@@ -15,3 +15,5 @@ y_pred = bst.predict(data)
 temp_result = [y.argmax() for y in y_pred]
 final_result = [antidit[x] for x in temp_result]
 
+DataSet = list(zip(user_id,final_result))
+df = pd.DataFrame(data = DataSet ,columns=['user_id','current_service'])
