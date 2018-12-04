@@ -22,18 +22,20 @@ train_data['complaint_level']=train_data['complaint_level'].astype(int)
 train_data['former_complaint_num']=train_data['former_complaint_num'].astype(int)
 train_data['current_service']=train_data['current_service'].astype(int)
 
-
-
+dit = {89950166:0, 89950167:1, 89950168:2, 90063345:3, 90109916:4, 90155946:5, 99999825:6, 99999826:7, 99999827:8, 99999828:9, 99999830:10}
+antidit = {0: 89950166, 1: 89950167, 2: 89950168, 3: 90063345, 4: 90109916, 5: 90155946, 6: 99999825, 7: 99999826, 8: 99999827, 9: 99999828, 10: 99999830}
 train_data.pop('user_id')
-y = train_data.pop('current_service')
-y = y.astype(int)
+ty = train_data.pop('current_service')
+ty = ty.astype(int)
+y = [dit[x] for x in ty]
+
 col = train_data.columns
 x = train_data[col]
 train_x, valid_x, train_y, valid_y = train_test_split(x, y, test_size=0.333, random_state=0)
 
 
-train = lgb.Dataset(train_x,train_y)
-valid = lgb.Dataset(valid_x, valid_y, reference=train)
+train = lgb.Dataset(train_x,label=train_y)
+valid = lgb.Dataset(valid_x, label=valid_y, reference=train)
 
 
 
@@ -42,8 +44,9 @@ valid = lgb.Dataset(valid_x, valid_y, reference=train)
 # specify your configurations as a dict
 params = {
     'boosting_type': 'gbdt',
-    'objective': 'regression',
-    'metric': {'l2', 'l1'},
+    'objective': 'multiclass',
+    'metric': 'multi_logloss',
+    'num_class': 12,
     'num_leaves': 31,
     'learning_rate': 0.05,
     'feature_fraction': 0.9,
@@ -67,5 +70,17 @@ gbm.save_model('model.txt')
 print('Starting predicting...')
 # predict
 y_pred = gbm.predict(valid_x, num_iteration=gbm.best_iteration)
-# eval
-print('The rmse of prediction is:', mean_squared_error(valid_y, y_pred) ** 0.5)
+temp_result = [y.argmax() for y in y_pred]
+
+cnt1 = 0
+cnt2 = 0
+for i in range(len(valid_y)):
+    if temp_result[i] == valid_y[i]:
+        cnt1 += 1
+    else:
+        cnt2 += 1
+
+print("Accuracy: %.2f %% " % (100 * cnt1 / (cnt1 + cnt2)))
+
+
+final_result = [antidit[x] for x in temp_result]
