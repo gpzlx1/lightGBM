@@ -22,11 +22,15 @@ user_id = test_data.pop('user_id')
 antidit = {0: 89950166, 1: 89950167, 2: 89950168, 3: 90063345, 4: 90109916, 5: 90155946, 6: 99999825, 7: 99999826, 8: 99999827, 9: 99999828, 10: 99999830}
 
 print('begin predict...')
-bst = lgb.Booster(model_file='model.txt')
+bst = lgb.Booster(model_file='modewait.txt')
 y_pred = bst.predict(test_data)
 temp_result = [y.argmax() for y in y_pred]
 final_result = [antidit[x] for x in temp_result]
+test_data.insert(0,'user_id',user_id)
+test_data.insert(1,'current_service',final_result)
+test_data.to_csv('predictwait.csv', index=False, header=True,encoding='utf-8' )
 
 DataSet = list(zip(user_id,final_result))
 df = pd.DataFrame(data = DataSet ,columns=['user_id','current_service'])
-df.to_csv('predict1.csv', index=False, header=True,encoding='utf-8' )
+df = df.loc[df['current_service'] != 89950166]
+df.to_csv('temp1.csv', index=False, header=True,encoding='utf-8' )

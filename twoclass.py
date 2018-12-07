@@ -7,6 +7,10 @@ from sklearn.model_selection import train_test_split
 
 print('Loading data...')
 train_data = pd.read_csv('train_org.csv')   # 读取数据
+train_data = train_data.loc[train_data['current_service'].isin(['89950166','99999830'])]
+
+
+
 train_data['service_type']=train_data['service_type'].astype(int)
 train_data['is_mix_service']=train_data['is_mix_service'].astype(int)
 train_data['online_time']=train_data['online_time'].astype(int)
@@ -22,8 +26,8 @@ train_data['complaint_level']=train_data['complaint_level'].astype(int)
 train_data['former_complaint_num']=train_data['former_complaint_num'].astype(int)
 train_data['current_service']=train_data['current_service'].astype(int)
 
-dit = {89950166:0, 89950167:1, 89950168:2, 90063345:3, 90109916:4, 90155946:5, 99999825:6, 99999826:7, 99999827:8, 99999828:9, 99999830:0}
-antidit = {0: 89950166, 1: 89950167, 2: 89950168, 3: 90063345, 4: 90109916, 5: 90155946, 6: 99999825, 7: 99999826, 8: 99999827, 9: 99999828, 10: 99999830}
+dit = {89950166:0,  99999830:1}
+antidit = {0: 89950166, 1: 99999830}
 #train_data.pop('user_id')
 ty = train_data.pop('current_service')
 ty = ty.astype(int)
@@ -44,9 +48,8 @@ valid = lgb.Dataset(valid_x, label=valid_y, reference=train)
 # specify your configurations as a dict
 params = {
     'boosting_type': 'gbdt',
-    'objective': 'multiclass',
-    'metric': 'multi_logloss',
-    'num_class': 10,
+    'objective': 'binary',
+    'metric': 'auc',
     'num_leaves': 1000,
     'learning_rate': 0.05,
     'feature_fraction': 0.9,
@@ -66,12 +69,12 @@ gbm = lgb.train(params,
 
 print('Saving model...')
 # save model to file
-gbm.save_model('modewait.txt')
+gbm.save_model('twoclasses.txt')
 
 print('Starting predicting...')
 # predict
 y_pred = gbm.predict(valid_x, num_iteration=gbm.best_iteration)
-temp_result = [y.argmax() for y in y_pred]
+temp_result = [ int(y+0.5) for y in y_pred]
 
 cnt1 = 0
 cnt2 = 0
