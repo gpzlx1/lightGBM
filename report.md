@@ -78,7 +78,7 @@
 #### 定量统计
 
 首先对几列定量数据进行分析，得到结果如下
-||online_time  |  1_total_fee   | 2_total_fee  |  3_total_fee |   4_total_fee|  month_traffic  |contract_time|
+| |online_time  |  1_total_fee   | 2_total_fee  |  3_total_fee |   4_total_fee|  month_traffic  |contract_time|
 |---|--:|--:|--:|--:|--:|--:|--:|
 |count  | 743990.000000 | 743990.000000|  743990.000000  |743990.000000 | 743990.000000 | 743990.000000  |743990.000000    |
 |mean    |    42.163250  |   105.316648    | 111.153573   |  102.827366    | 110.909542    |1280.314131    |   7.769703  |
@@ -103,15 +103,15 @@
 4. **关于many_over_bil**l: 1代表是，0代表不是。虽然各个套餐都有超套的现象，但是钟意人生最多的89950168套餐超套现象格外严重，近百分之九十的89950168套餐都超套。
 5. **关于service_type**：0代表23G融合，1代表2I2C，2代表2G，3代表3G，4代表4G。可见极大部分用户都是1或者4，没有0，2，几乎没有3。
 
-![age](assets\age.png)
+![age](assets/age.png)
 
 **关于age分布**：0代表数据缺失，用户年龄分布呈现右偏分布，主要用户以20到40岁的青壮年为主，娱乐影音需求较强。
 
-![1_total_fee](assets\1_total_fee.png)
+![1_total_fee](assets/1_total_fee.png)
 
 **关于1_total_fee分布**：1_total_fee，2_total_fee，3_total_fee，4_total_fee的分布都极其类似，在0-200元段集中了近百分之八十五的用户，费用超过400RMB的不足百分之五。
 
-![online_time](D:\code\repo\ccfdf\lightGBM\assets\online_time.png)
+![online_time](assets/online_time.png)
 
 **关于online_time**：网时长的范围在1-274小时之间。上图横轴是在网时长，纵轴是人数，每种颜色的线代表一种套餐类型.
 
@@ -119,7 +119,7 @@
 
 为了观察各个自变量与因变量的相关程度和线性关系，我们绘制了数据的矩阵热力图
 
-![热力图](assets\热力图.png)
+![热力图](assets/热力图.png)
 
 如上图所示，绘制了各个变量之间的（线性）相关程度，大部分不存在很明显的线性关系，排除了共线性问题。
 
@@ -157,21 +157,21 @@ df.to_csv("result.csv", index=False)
 
 初步尝试提交的结果如下
 
-![worst](assets\worst.png)
+![worst](assets/worst.png)
 
 初次的提交未取得很好的成绩，但对我们后续的分析有所帮助。
 
 将训练数据集拆成两部分相互验证，在训练过程中发现训练部分正确率和测试部分正确率相差较大，该决策树存在较为严重的过拟合现象。为了解决这一现象，设置Max_depth等相关参数，控制决策树的深度和分裂速度。在调完相应参数后，利用决策树模型最终得到的结果为
 
-![first_try](assets\first_try.png)
+![first_try](assets/first_try.png)
 
 在此基础上，以图标的形式直观的生成决策树。**决策树最害怕的情况就是出现过拟合**。
 
-![service_type](assets\service_type.png)
+![service_type](assets/service_type.png)
 
 显然，模型存在明显的过拟合。并对结果进行输出f1-score进行评估，
 
-![1544358909932](assets\1544358909932.png)
+![1544358909932](assets/1544358909932.png)
 
 由f1-score决策树对**89950166、90063345、90109916**三个套餐预测非常准确，但是对**99999830**套餐预测准确率不是非常高。
 
@@ -179,7 +179,7 @@ df.to_csv("result.csv", index=False)
 
 使用神经网络算法前首先对数据进行较严格的预处理。对部分值进行连续值的离散化，而对需要保持连续性的值进行归一化处理。例如，对total_fee进行垂直聚类以离散化，其划分结果如下
 
-![1544358200879](assets\1544358200879.png)
+![1544358200879](assets/1544358200879.png)
 
 总共将total_fee划分为20块。
 
@@ -232,11 +232,11 @@ end
 
 训练中的状态如下图所示
 
-![1544358426351](assets\1544358426351.png)
+![1544358426351](assets/1544358426351.png)
 
 提交后，结果相对上次已有了较大的提升
 
-![1544358464592](assets\1544358464592.png)
+![1544358464592](assets/1544358464592.png)
 
 ### 最终选择——LightGBM
 
@@ -297,7 +297,7 @@ gbm.save_model('model.txt')
 
 上述的代码十分简单，对数据进行了初步处理后直接调用lightgbm进行训练。提交后得到结果如下
 
-![predict](assets\predict.png)
+![predict](assets/predict.png)
 
 ## 模型的优化
 
@@ -311,7 +311,7 @@ gbm.save_model('model.txt')
 
 通过对训练集进行划分，我们观察了预测各类的准确度，统计其f1_score，如下所示
 
-![f1_score](assets\f1_score.png)
+![f1_score](assets/f1_score.png)
 
  可以发现，89950166, 99999830 两类的预测明显低于其它类，经常查找相关资料得知89950166和99999830套餐属性非常类似，166号套餐易被归类于830号套餐，导致lightGBM模型在这两类的预测上极其不精确。故我们决定先将这两类打上同一标签，最后在将这两类进行二分类。策略如下：
 
@@ -319,11 +319,11 @@ gbm.save_model('model.txt')
 
 对10类进行训练时，f1_score有了明显改善
 
-![f1_score_1](assets\f1_score_1.png)
+![f1_score_1](assets/f1_score_1.png)
 
 此优化的效果显著，提交后分数有了较大的提升。
 
-![optimization1](assets\optimization1.png)
+![optimization1](assets/optimization1.png)
 
 ### 参数调整
 
@@ -363,7 +363,7 @@ params = {
 
 经过调参之后，分数又有了较大的提升
 
-![final](assets\final.png)
+![final](assets/final.png)
 
 ## 参考文献
 
