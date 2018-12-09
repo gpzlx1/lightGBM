@@ -1,8 +1,8 @@
 # 面向电信行业存量用户的智能套餐个性化匹配模型
 
-**小组成员**：龚平(PB17030808)、黄业琦(PB17000144)、魏剑宇(PB17111586)
+**小组成员**：魏剑宇(PB17111586)、龚平(PB17030808)、黄业琦(PB17000144)
 
-**学院**：计算机科学与技术学院、少年班学院
+**学院**：计算机与技术学院、少年班学院
 
 ## 摘要
 
@@ -60,15 +60,12 @@
 |last_month_traffic     |	   743990 |non-null| float64|上月结转流量|
 |local_trafffic_month    |	  743990| non-null |float64|月累计-本地数据流量|
 |local_caller_time       |	  743990| non-null |float64|本地语音主叫通话时长|
-|service1_caller_time |	     743990 |non-null| float64|套外主叫通话时长|
-|service2_caller_time  |	    743990 |non-null| float64|/|
 |gender               |   	  743990 |non-null |object|性别|
 |age                     |	  743990| non-null| object|年龄|
 |complaint_level     |  	   	 743990 |non-null| int64|投诉重要性|
 |former_complaint_num  |  	  743990| non-null| int64|交费金历史投诉总量|
 |former_complaint_fee  | 	   743990| non-null |float64|历史执行补救费用交费金额|
 |current_service      	|     743990 |non-null| int64|**需要预测的套餐类型**|
-|user_id                |	   743990 |non-null| object|用户编码，标识用户的唯一字段|
 
 官方提供的数据并不十分规整，csv中存在缺失值(\N)，主要在`total_fee`列中。由于训练集中缺失数据的行很少，只有几行，相对于总数据量**743990**行的影响很小，故直接去除。
 
@@ -162,17 +159,17 @@ df.to_csv("result.csv", index=False)
 
 ![worst](assets\worst.png)
 
-初次的提交未取得很好的成绩，但对我们后续的分析有所帮助。**决策树最害怕的情况就是出现过拟合**。
+初次的提交未取得很好的成绩，但对我们后续的分析有所帮助。
 
 将训练数据集拆成两部分相互验证，在训练过程中发现训练部分正确率和测试部分正确率相差较大，该决策树存在较为严重的过拟合现象。为了解决这一现象，设置Max_depth等相关参数，控制决策树的深度和分裂速度。在调完相应参数后，利用决策树模型最终得到的结果为
 
 ![first_try](assets\first_try.png)
 
-在此基础上，以图标的形式直观的生成决策树
+在此基础上，以图标的形式直观的生成决策树。**决策树最害怕的情况就是出现过拟合**。
 
 ![service_type](assets\service_type.png)
 
-并对结果进行输出f1-score进行评估，
+显然，模型存在明显的过拟合。并对结果进行输出f1-score进行评估，
 
 ![1544358909932](assets\1544358909932.png)
 
@@ -186,6 +183,53 @@ df.to_csv("result.csv", index=False)
 
 总共将total_fee划分为20块。
 
+代码如下所示
+
+ ```matlab
+[a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z]=textread('train.txt','%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f',612652);
+[input,minI,maxI]=premnmx([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y]');
+
+map=containers.Map();
+id =0;
+
+s = length( z) ;
+output = zeros( s , 25  ) ;
+for i = 1 : s
+    str=num2str(z(i));
+    if (map.isKey(str))
+        output( i , map(str)  ) = 1 ;
+    else
+        id = id+1;
+        map(str)=id;
+        output( i , id ) = 1 ;
+    end
+end
+
+f=fopen ('E:\DATA_CPT\submit.txt','w');
+fprintf(f,'1');
+
+net = newff( minmax(input) , [10 25] , { 'logsig' 'purelin' } , 'traingdx' ) ; 
+
+net.trainparam.show = 51 ;
+net.trainparam.epochs = 2000 ;
+net.trainparam.goal = 0.01 ;
+net.trainParam.lr = 0.01 ;
+
+net = train( net, input , output' ) ;
+
+[service_type,is_mix_service,online_time,total_fee1,total_fee2,total_fee3,total_fee4,month_traffic,many_over_bill,contract_type,contract_time,is_promise_low_consume,net_service,pay_times,pay_num,last_month_traffic,local_trafffic_month,local_caller_time,service1_caller_time,service2_caller_time,gender,age,complaint_level,former_complaint_num,former_complaint_fee,user_id] = textread('test.txt' , '%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%s',262565);
+
+testInput = tramnmx ([service_type,is_mix_service,online_time,total_fee1,total_fee2,total_fee3,total_fee4,month_traffic,many_over_bill,contract_type,contract_time,is_promise_low_consume,net_service,pay_times,pay_num,last_month_traffic,local_trafffic_month,local_caller_time,service1_caller_time,service2_caller_time,gender,age,complaint_level,former_complaint_num,former_complaint_fee]' , minI, maxI ) ;
+
+YYYY = sim( net , testInput ) 
+[s1 , s2] = size( YYYY ) ;
+hitNum = 0 ;
+for i = 1 : s2
+    [m , Index] = max( YYYY( : ,  i ) ) ;
+    fprintf(f,'%s,%d\n',user_id(i),Index );
+end
+ ```
+
 训练中的状态如下图所示
 
 ![1544358426351](assets\1544358426351.png)
@@ -196,7 +240,7 @@ df.to_csv("result.csv", index=False)
 
 ### 最终选择——LightGBM
 
-经过权衡与选择，最终我们选择了使用[LightGBM](https://github.com/Microsoft/LightGBM)。LightGBM是基于梯度提升的决策树提供的一组框架。LightGBM 是一个梯度提升（boosting）框架，使用基于学习算法的决策树，该框架是微软开源的，它有许多优秀的特性，比如针对速度和内存使用的优化，稀疏优化，准确率的优化，网络通信的优化，并行学习的优化，并且提供了 GPU 的支持等等特性。
+经过权衡与选择，最终我们选择了使用[LightGBM](https://github.com/Microsoft/LightGBM)。
 
 >LightGBM 是一个梯度提升（boosting）框架，使用基于学习算法的决策树，该框架是微软开源的，它有许多优秀的特性，比如针对速度和内存使用的优化，稀疏优化，准确率的优化，网络通信的优化，并行学习的优化，并且提供了 GPU 的支持等等特性。
 
@@ -326,3 +370,10 @@ params = {
 1. [LightGBM中文文档](http://lightgbm.apachecn.org/)
 2. [BDCI冠军解决方案](https://github.com/PPshrimpGo/BDCI2018-ChinauUicom-1st-solution)
 3. [LightGBM官方文档](https://github.com/Microsoft/LightGBM)
+
+## 小组成员及分工
+|   姓名 |       学号 |                                        分工 |
+| -----: | ---------: | ------------------------------------------: |
+|   龚平 | PB17030808 |      数据分析、决策树、参数调整、单独二分类 |
+| 黄业琦 | PB17000144 |                    数据离散化、神经网络算法 |
+| 魏剑宇 | PB17111586 | 数据预处理、lightGBM、total_fee防过拟合处理 |
