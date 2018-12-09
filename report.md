@@ -4,7 +4,17 @@
 
 **学院**：计算机科学与技术学院、少年班学院
 
----
+## 摘要
+
+本次赛题的场景为电信套餐的个性化推荐。对数据进行了分析和处理。分析了各列数据的分布特征和对预测类型产生的可能影响，对缺失的数据进行了合理的预处理，并分析了各个数据间的相关性，对数据有了较深的了解。
+
+之后经过决策树、神经网络等模型的尝试，对各个模型训练的结果进行了分析。最终采用了LightGBM。LightGBM是基于梯度上升决策树的一个框架。单独使用此框架就已能得到不错的成绩。
+
+经过特殊数据的处理防止过拟合、单独二分类、参数调整等优化后，模型在初赛测试集上取得了不错的效果。
+
+## 关键词
+
+数据预处理、推荐系统、LightGBM、二分类
 
 ## 数据分析及预处理
 
@@ -28,21 +38,17 @@
 
 ### 数据预处理
 
-官方提供的数据并不十分规整，csv中存在缺失值(\N)，主要在`total_fee`列中。由于训练集中缺失数据的行很少，只有几行，相对于总数据量**743990**行的影响很小，故直接去除。
-
-对于测试集，由于缺失的数据主要在`total_fee`，而`total_fee`相关的列共有4列，`1_total_fee`,`2_total_fee`,`3_total_fee`,`4_total_fee`，且经过对数据特征的观察，其间的关联性很明显，故对于缺失的列直接填充其它完好列的平均值。
-
-经过预处理后，得到数据如下所示
+初始数据情况如下
 
 | columns | num  | null or non-null | type | description |
 | :-----: | :--: | :--------------: | :--: | :---------: |
 |service_type       |      743990| non-null |int64|套餐类型 0：23G融合，1：2I2C，    2：2G，3：3G，4：4G|
 |is_mix_service      |      743990| non-null |int64|是否固移融合套餐 1.是 0.否|
 |online_time         |      743990| non-null| int64|在网时长|
-|1_total_fee         |      743990| non-null |float64|当月总出账金额_月|
-|2_total_fee         |      743990| non-null| object|当月前1月总出账金额_月|
-|3_total_fee         |      743990| non-null |object|当月前2月总出账金额_月|
-|4_total_fee         |      743990| non-null |float64|当月前3月总出账金额_月|
+|1_total_fee         |      743990| non-null |float64|当月总出账金额|
+|2_total_fee         |      743990| non-null| object|当月前1月总出账金额|
+|3_total_fee         |      743990| non-null |object|当月前2月总出账金额|
+|4_total_fee         |      743990| non-null |float64|当月前3月总出账金额|
 |month_traffic       |      743990| non-null| float64|当月累计-流量（单位：MB）|
 |many_over_bill      |      743990 |non-null| int64|连续超套|
 |contract_type       |      743990 |non-null| int64|合约类型|
@@ -63,6 +69,12 @@
 |former_complaint_fee  | 	   743990| non-null |float64|历史执行补救费用交费金额|
 |current_service      	|     743990 |non-null| int64|**需要预测的套餐类型**|
 |user_id                |	   743990 |non-null| object|用户编码，标识用户的唯一字段|
+
+官方提供的数据并不十分规整，csv中存在缺失值(\N)，主要在`total_fee`列中。由于训练集中缺失数据的行很少，只有几行，相对于总数据量**743990**行的影响很小，故直接去除。
+
+对于测试集，由于缺失的数据主要在`total_fee`，而`total_fee`相关的列共有4列，`1_total_fee`,`2_total_fee`,`3_total_fee`,`4_total_fee`，且经过对数据特征的观察，其间的关联性很明显，故对于缺失的列直接填充其它完好列的平均值。
+
+此外数据中还存在一些异常值0等，推测应该是未能统计到的数据。
 
 ### 数据分析
 
@@ -86,17 +98,31 @@
 
 为方便对数据进行离散化，统计了数据的分布情况，绘制图表如下所示
 
-![noname](C:\Users\kaleid_liner\Documents\Tencent Files\851934504\FileRecv\noname.png)
+![noname](assets\noname.png)
 
-![age](C:\Users\kaleid_liner\Documents\Tencent Files\851934504\FileRecv\age.png)
+1. **关于complaint_level**：由官网数据介绍我们可以知道1代表普通，2代表重要，3代表重大，而0应该是数据缺失未被标记。可见，只有少部分人被标记了complaint_level，并且在其中只有极少数是重要或者重大等级。
+2. **关于gender**：1代表男性，2代表女性，0代表gender未被标记。在此处，我们可以发现，男女性对同一套餐的偏爱程度不同，其中89950167（即4G全国套餐-106元套餐）相较别的套餐更受男女性欢迎。
+3. **关于is_promise_low_consume**：1代表是低保，0代表不是低保。可见绝大多数人都是非低保用户。低保用户的套餐多集中于89950166、89950167、99999828，其其套餐金额都在150元以下。这也符合现实常识。
+4. **关于many_over_bil**l: 1代表是，0代表不是。虽然各个套餐都有超套的现象，但是钟意人生最多的89950168套餐超套现象格外严重，近百分之九十的89950168套餐都超套。
+5. **关于service_type**：0代表23G融合，1代表2I2C，2代表2G，3代表3G，4代表4G。可见极大部分用户都是1或者4，没有0，2，几乎没有3。
 
+![age](assets\age.png)
 
+**关于age分布**：0代表数据缺失，用户年龄分布呈现右偏分布，主要用户以20到40岁的青壮年为主，娱乐影音需求较强。
+
+![1_total_fee](assets\1_total_fee.png)
+
+**关于1_total_fee分布**：1_total_fee，2_total_fee，3_total_fee，4_total_fee的分布都极其类似，在0-200元段集中了近百分之八十五的用户，费用超过400RMB的不足百分之五。
+
+![online_time](D:\code\repo\ccfdf\lightGBM\assets\online_time.png)
+
+**关于online_time**：网时长的范围在1-274小时之间。上图横轴是在网时长，纵轴是人数，每种颜色的线代表一种套餐类型.
 
 #### 自变量与因变量的关系
 
 为了观察各个自变量与因变量的相关程度和线性关系，我们绘制了数据的矩阵热力图
 
-![热力图](C:\Users\kaleid_liner\Documents\Tencent Files\851934504\FileRecv\热力图.png)
+![热力图](assets\热力图.png)
 
 如上图所示，绘制了各个变量之间的（线性）相关程度，大部分不存在很明显的线性关系，排除了共线性问题。
 
@@ -134,39 +160,39 @@ df.to_csv("result.csv", index=False)
 
 初步尝试提交的结果如下
 
-![worst](C:\Users\kaleid_liner\Pictures\worst.png)
+![worst](assets\worst.png)
+
+初次的提交未取得很好的成绩，但对我们后续的分析有所帮助。**决策树最害怕的情况就是出现过拟合**。
 
 将训练数据集拆成两部分相互验证，在训练过程中发现训练部分正确率和测试部分正确率相差较大，该决策树存在较为严重的过拟合现象。为了解决这一现象，设置Max_depth等相关参数，控制决策树的深度和分裂速度。在调完相应参数后，利用决策树模型最终得到的结果为
 
-![first_try](C:\Users\kaleid_liner\Pictures\first_try.png)
+![first_try](assets\first_try.png)
 
-初次的提交未取得很好的成绩，但对我们后续的分析有所帮助。**决策树最害怕的情况就是出现过拟合**。对出现较差成绩的原因进行分析，我们绘制了决策树的模型。
+在此基础上，以图标的形式直观的生成决策树
 
-![service_type](C:\Users\kaleid_liner\Documents\Tencent Files\851934504\FileRecv\service_type.png)
-
-可以很明显的发现，过拟合现象十分严重。
+![service_type](assets\service_type.png)
 
 并对结果进行输出f1-score进行评估，
 
-![1544358909932](C:\Users\kaleid_liner\AppData\Roaming\Typora\typora-user-images\1544358909932.png)
+![1544358909932](assets\1544358909932.png)
 
-由f1-score决策树对89950166、90063345、90109916三个套餐预测非常准确，但是对99999830套餐预测准确率不是非常高。
+由f1-score决策树对**89950166、90063345、90109916**三个套餐预测非常准确，但是对**99999830**套餐预测准确率不是非常高。
 
 ### 神经网络
 
 使用神经网络算法前首先对数据进行较严格的预处理。对部分值进行连续值的离散化，而对需要保持连续性的值进行归一化处理。例如，对total_fee进行垂直聚类以离散化，其划分结果如下
 
-![1544358200879](C:\Users\kaleid_liner\AppData\Roaming\Typora\typora-user-images\1544358200879.png)
+![1544358200879](assets\1544358200879.png)
 
 总共将total_fee划分为20块。
 
 训练中的状态如下图所示
 
-![1544358426351](C:\Users\kaleid_liner\AppData\Roaming\Typora\typora-user-images\1544358426351.png)
+![1544358426351](assets\1544358426351.png)
 
 提交后，结果相对上次已有了较大的提升
 
-![1544358464592](C:\Users\kaleid_liner\AppData\Roaming\Typora\typora-user-images\1544358464592.png)
+![1544358464592](assets\1544358464592.png)
 
 ### 最终选择——LightGBM
 
@@ -189,7 +215,7 @@ header = ['service_type', 'is_mix_service', 'online_time', 'many_over_bill',
 train_data[header] = train_data[header].astype(int)
 
 dict = {89950166: 0, 89950167: 1, 89950168: 2, 90063345: 3, 90109916: 4, 90155946: 5,
-        99999825: 6, 99999826: 7, 99999827: 8, 99999828: 9, 99999830: 0}
+        99999825: 6, 99999826: 7, 99999827: 8, 99999828: 9, 99999830: 10}
 reversedict = {0: 89950166, 1: 89950167, 2: 89950168, 3: 90063345, 4: 90109916, 5: 90155946,
                6: 99999825, 7: 99999826, 8: 99999827, 9: 99999828, 10: 99999830}
 
@@ -205,7 +231,7 @@ params = {
     'boosting_type': 'gbdt',
     'objective': 'multiclass',
     'metric': 'multi_logloss',
-    'num_class': 10,
+    'num_class': 11,
     'num_leaves': 1000,
     'learning_rate': 0.05,
     'feature_fraction': 0.9,
@@ -227,7 +253,7 @@ gbm.save_model('model.txt')
 
 上述的代码十分简单，对数据进行了初步处理后直接调用lightgbm进行训练。提交后得到结果如下
 
-![predict](C:\Users\kaleid_liner\Pictures\predict.png)
+![predict](assets\predict.png)
 
 ## 模型的优化
 
@@ -241,25 +267,27 @@ gbm.save_model('model.txt')
 
 通过对训练集进行划分，我们观察了预测各类的准确度，统计其f1_score，如下所示
 
-![f1_score](C:\Users\kaleid_liner\Pictures\f1_score.png)
+![f1_score](assets\f1_score.png)
 
- 可以发现，89950166, 99999830 两类的预测明显低于其它类，且这两类经常互相混淆，模型在这两类的预测上极其不精确。故我们决定对这两类进行单独的二分类。策略如下：
+ 可以发现，89950166, 99999830 两类的预测明显低于其它类，经常查找相关资料得知89950166和99999830套餐属性非常类似，166号套餐易被归类于830号套餐，导致lightGBM模型在这两类的预测上极其不精确。故我们决定先将这两类打上同一标签，最后在将这两类进行二分类。策略如下：
 
 > 初步处理中将89950166和99999830作为一类参与第一层决策树的构建，对总共10类进行训练。第一步结束后，再对这两类进行单独的二分类训练，得到最终的模型，使用此最终的模型进行预测。 
 
 对10类进行训练时，f1_score有了明显改善
 
-![f1_score_1](C:\Users\kaleid_liner\Pictures\f1_score_1.png)
+![f1_score_1](assets\f1_score_1.png)
 
 此优化的效果显著，提交后分数有了较大的提升。
 
-![optimization1](C:\Users\kaleid_liner\Pictures\optimization1.png)
+![optimization1](assets\optimization1.png)
 
 ### 参数调整
 
-之后是对lightgbm的参数进行调整。经过多次尝试后，最终采用的参数如下，
+之后便是对lightgbm的参数进行调整。经过多次尝试后，最终采用的参数如下，
 
 ```python
+dict = {89950166: 0, 89950167: 1, 89950168: 2, 90063345: 3, 90109916: 4, 90155946: 5,
+        99999825: 6, 99999826: 7, 99999827: 8, 99999828: 9, 99999830: 0}
 # 全分类参数
 params = {
     'metric': 'multi_logloss',
@@ -291,11 +319,10 @@ params = {
 
 经过调参之后，分数又有了较大的提升
 
-![final](C:\Users\kaleid_liner\Pictures\final.png)
-
-## 总结
-
-
+![final](assets\final.png)
 
 ## 参考文献
 
+1. [LightGBM中文文档](http://lightgbm.apachecn.org/)
+2. [BDCI冠军解决方案](https://github.com/PPshrimpGo/BDCI2018-ChinauUicom-1st-solution)
+3. [LightGBM官方文档](https://github.com/Microsoft/LightGBM)
