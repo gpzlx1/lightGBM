@@ -78,7 +78,8 @@
 #### 定量统计
 
 首先对几列定量数据进行分析，得到结果如下
-| |online_time  |  1_total_fee   | 2_total_fee  |  3_total_fee |   4_total_fee|  month_traffic  |contract_time|
+
+|  online_time  |  1_total_fee   | 2_total_fee  |  3_total_fee |   4_total_fee|  month_traffic  |contract_time|
 |---|--:|--:|--:|--:|--:|--:|--:|
 |count  | 743990.000000 | 743990.000000|  743990.000000  |743990.000000 | 743990.000000 | 743990.000000  |743990.000000    |
 |mean    |    42.163250  |   105.316648    | 111.153573   |  102.827366    | 110.909542    |1280.314131    |   7.769703  |
